@@ -22,14 +22,13 @@ Highlighting only activates when viewing a page different from your stored items
 
 ## Supported sites
 
-- idealo.de
-- idealo.at
-- idealo.fr
-- idealo.es
-- idealo.it
-- idealo.co.uk
+**idealo** — idealo.de, idealo.at, idealo.fr, idealo.es, idealo.it, idealo.co.uk
 
-UI is localized to match each domain's language.
+**Geizhals** — geizhals.de, geizhals.at, geizhals.eu, skinflint.co.uk, cenowarka.pl
+
+**billiger.de** — billiger.de
+
+Each site maintains its own separate compare list. UI is localized to match each domain's language (German, English, French, Spanish, Italian, Polish).
 
 ## Installation
 
