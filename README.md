@@ -28,6 +28,8 @@ Highlighting only activates when viewing a page different from your stored items
 
 **billiger.de** — billiger.de
 
+**guenstiger.de** — guenstiger.de
+
 Each site maintains its own separate compare list. UI is localized to match each domain's language (German, English, French, Spanish, Italian, Polish).
 
 ## Installation
@@ -59,6 +61,13 @@ npm run build      # production build
 - Chrome Extension Manifest V3
 - Vitest for testing
 - `chrome.storage.session` (data clears on browser close)
+
+## Permissions
+
+- **storage** — persists your compare list per site using `chrome.storage.session` (data clears when the browser closes)
+- **activeTab** — accesses the current tab to inject the comparison UI on supported sites
+
+No host permissions are required. The extension only runs on the supported domains listed above via content script matching.
 
 ## License
 
