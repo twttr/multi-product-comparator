@@ -3,6 +3,18 @@
     "message": "Comparateur multi-produits"
   },
   "extensionDescription": {
-    "message": "Met en \u00e9vidence les magasins qui proposent tous vos produits s\u00e9lectionn\u00e9s"
+    "message": "Met en évidence les magasins qui proposent tous vos produits sélectionnés"
+  },
+  "popupTitle": {
+    "message": "Produits comparés"
+  },
+  "popupClearAll": {
+    "message": "Tout supprimer"
+  },
+  "popupEmptyState": {
+    "message": "Aucun produit ajouté. Visitez une page produit et cliquez sur \"Ajouter au comparatif\"."
+  },
+  "popupRemove": {
+    "message": "Supprimer"
   }
 }

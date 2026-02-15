@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { ProductItem } from "../src/types.js";
+import { computeMatchingShops } from "../src/matching.js";
 
 const OFFER_LINK_SELECTOR =
   ".productOffers-listItemOfferLink[data-shop-name]";
@@ -12,36 +13,6 @@ function extractProductIdFromDom(): string | null {
   if (!firstOffer) return null;
   const url = new URL(firstOffer.href, window.location.origin);
   return url.searchParams.get("productid");
-}
-
-function computeMatchingShops(
-  items: ProductItem[],
-  currentShops: string[],
-  excludeProductId?: string
-): Set<string> {
-  const filtered = excludeProductId
-    ? items.filter((item) => item.productId !== excludeProductId)
-    : items;
-  if (filtered.length === 0) return new Set();
-
-  const currentShopSet = new Set(currentShops);
-  const shopCounts = new Map<string, number>();
-
-  for (const item of filtered) {
-    for (const shop of item.shopNames) {
-      if (currentShopSet.has(shop)) {
-        shopCounts.set(shop, (shopCounts.get(shop) ?? 0) + 1);
-      }
-    }
-  }
-
-  const matching = new Set<string>();
-  for (const [shop, count] of shopCounts) {
-    if (count === filtered.length) {
-      matching.add(shop);
-    }
-  }
-  return matching;
 }
 
 function createItem(shopNames: string[]): ProductItem {
@@ -452,5 +423,121 @@ describe("Billiger DOM scraping", () => {
 
     const rows = document.querySelectorAll("[data-offer-row]");
     expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
+  });
+});
+
+const GUENSTIGER_OFFER_LINK_SELECTOR = ".offerListHoverContainer[data-sellertext]";
+const GUENSTIGER_OFFER_ROW_SELECTOR = ".offerListHoverContainer";
+const extractGuenstigerShopName = (el: Element) => el.getAttribute("data-sellertext");
+
+function extractGuenstigerProductId(container: Element | null): string | null {
+  return container?.getAttribute("data-ptitle") ?? null;
+}
+
+describe("Guenstiger product ID extraction", () => {
+  it("extracts product ID from data-ptitle attribute", () => {
+    const el = document.createElement("div");
+    el.setAttribute("data-ptitle", "12685936902");
+    expect(extractGuenstigerProductId(el)).toBe("12685936902");
+  });
+
+  it("returns null when no element provided", () => {
+    expect(extractGuenstigerProductId(null)).toBeNull();
+  });
+
+  it("returns null when data-ptitle is missing", () => {
+    const el = document.createElement("div");
+    expect(extractGuenstigerProductId(el)).toBeNull();
+  });
+});
+
+describe("Guenstiger shop name extraction", () => {
+  it("extracts shop name from data-sellertext", () => {
+    const el = document.createElement("div");
+    el.setAttribute("data-sellertext", "Prosatech");
+    expect(extractGuenstigerShopName(el)).toBe("Prosatech");
+  });
+
+  it("returns null when data-sellertext is missing", () => {
+    const el = document.createElement("div");
+    expect(extractGuenstigerShopName(el)).toBeNull();
+  });
+});
+
+describe("Guenstiger DOM scraping", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  function createGuenstigerOfferRow(shopName: string, productId = "12685936902"): void {
+    const row = document.createElement("div");
+    row.className = "offerListHoverContainer";
+    row.setAttribute("data-sellertext", shopName);
+    row.setAttribute("data-ptitle", productId);
+    document.body.appendChild(row);
+  }
+
+  function scrapeGuenstigerShopNames(): string[] {
+    const offerLinks = document.querySelectorAll(GUENSTIGER_OFFER_LINK_SELECTOR);
+    const shopNames = new Set<string>();
+    offerLinks.forEach((el) => {
+      const shopName = extractGuenstigerShopName(el);
+      if (shopName) shopNames.add(shopName);
+    });
+    return Array.from(shopNames);
+  }
+
+  function highlightGuenstigerMatchingShops(matchingShopNames: Set<string>): void {
+    const offerLinks = document.querySelectorAll(GUENSTIGER_OFFER_LINK_SELECTOR);
+    offerLinks.forEach((el) => {
+      const shopName = extractGuenstigerShopName(el);
+      if (shopName && matchingShopNames.has(shopName)) {
+        const row = el.closest(GUENSTIGER_OFFER_ROW_SELECTOR);
+        if (row) row.classList.add("idealo-multi-highlight");
+      }
+    });
+  }
+
+  it("scrapes shop names from guenstiger offer rows", () => {
+    createGuenstigerOfferRow("Prosatech");
+    createGuenstigerOfferRow("Amazon");
+    createGuenstigerOfferRow("MediaMarkt");
+    const names = scrapeGuenstigerShopNames();
+    expect(names).toEqual(["Prosatech", "Amazon", "MediaMarkt"]);
+  });
+
+  it("deduplicates guenstiger shop names", () => {
+    createGuenstigerOfferRow("Amazon");
+    createGuenstigerOfferRow("Amazon");
+    const names = scrapeGuenstigerShopNames();
+    expect(names).toEqual(["Amazon"]);
+  });
+
+  it("highlights matching guenstiger shop rows", () => {
+    createGuenstigerOfferRow("Prosatech");
+    createGuenstigerOfferRow("Amazon");
+    createGuenstigerOfferRow("MediaMarkt");
+
+    highlightGuenstigerMatchingShops(new Set(["Prosatech", "MediaMarkt"]));
+
+    const rows = document.querySelectorAll(".offerListHoverContainer");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(true);
+    expect(rows[1].classList.contains("idealo-multi-highlight")).toBe(false);
+    expect(rows[2].classList.contains("idealo-multi-highlight")).toBe(true);
+  });
+
+  it("does not highlight when no guenstiger matches", () => {
+    createGuenstigerOfferRow("Prosatech");
+    highlightGuenstigerMatchingShops(new Set(["Saturn"]));
+
+    const rows = document.querySelectorAll(".offerListHoverContainer");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
+  });
+
+  it("extracts product ID from first offer row", () => {
+    createGuenstigerOfferRow("Prosatech", "12685936902");
+    createGuenstigerOfferRow("Amazon", "12685936902");
+    const firstOffer = document.querySelector<HTMLElement>(GUENSTIGER_OFFER_LINK_SELECTOR);
+    expect(extractGuenstigerProductId(firstOffer)).toBe("12685936902");
   });
 });

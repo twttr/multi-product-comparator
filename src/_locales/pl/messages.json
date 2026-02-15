@@ -4,5 +4,17 @@
   },
   "extensionDescription": {
     "message": "Podświetla sklepy, które mają wszystkie wybrane produkty"
+  },
+  "popupTitle": {
+    "message": "Porównywane produkty"
+  },
+  "popupClearAll": {
+    "message": "Wyczyść wszystko"
+  },
+  "popupEmptyState": {
+    "message": "Nie dodano jeszcze żadnych produktów. Odwiedź stronę produktu i kliknij \"Dodaj do porównania\"."
+  },
+  "popupRemove": {
+    "message": "Usuń"
   }
 }

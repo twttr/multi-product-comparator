@@ -1,4 +1,6 @@
 import type { ProductItem, MessageRequest, SiteConfig } from "./types.js";
+import { detectSiteKey } from "./sites.js";
+import { computeMatchingShops } from "./matching.js";
 
 const idealoConfig: SiteConfig = {
   storageKey: "items_idealo",
@@ -40,17 +42,30 @@ const billigerConfig: SiteConfig = {
   },
 };
 
-function detectSite(): SiteConfig | null {
-  const host = window.location.hostname;
-  if (host.match(/idealo\./)) return idealoConfig;
-  if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return geizhalsConfig;
-  if (host.match(/billiger\./)) return billigerConfig;
-  return null;
-}
+const guenstigerConfig: SiteConfig = {
+  storageKey: "items_guenstiger",
+  offerLinkSelector: ".offerListHoverContainer[data-sellertext]",
+  extractShopName: (el) => el.getAttribute("data-sellertext"),
+  offerRowSelector: ".offerListHoverContainer",
+  extractProductId: () => {
+    const firstOffer = document.querySelector<HTMLElement>(
+      guenstigerConfig.offerLinkSelector
+    );
+    return firstOffer?.getAttribute("data-ptitle") ?? null;
+  },
+};
 
-const detectedSite = detectSite();
-if (!detectedSite) throw new Error("Unsupported site");
-const siteConfig: SiteConfig = detectedSite;
+const SITE_CONFIG_MAP: Record<string, SiteConfig> = {
+  idealo: idealoConfig,
+  geizhals: geizhalsConfig,
+  billiger: billigerConfig,
+  guenstiger: guenstigerConfig,
+};
+
+const siteKey = detectSiteKey(window.location.hostname);
+if (siteKey) {
+
+const siteConfig: SiteConfig = SITE_CONFIG_MAP[siteKey];
 
 interface Strings {
   addToCompare: string;
@@ -59,9 +74,11 @@ interface Strings {
   remove: string;
 }
 
+const DE_STRINGS: Strings = { addToCompare: "Zum Vergleich hinzufügen", added: "Hinzugefügt ✓", clearList: "Liste leeren", remove: "Entfernen" };
+
 const LOCALE_STRINGS: Record<string, Strings> = {
-  de: { addToCompare: "Zum Vergleich hinzufügen", added: "Hinzugefügt ✓", clearList: "Liste leeren", remove: "Entfernen" },
-  at: { addToCompare: "Zum Vergleich hinzufügen", added: "Hinzugefügt ✓", clearList: "Liste leeren", remove: "Entfernen" },
+  de: DE_STRINGS,
+  at: DE_STRINGS,
   fr: { addToCompare: "Ajouter au comparatif", added: "Ajouté ✓", clearList: "Vider la liste", remove: "Supprimer" },
   es: { addToCompare: "Añadir a la comparación", added: "Añadido ✓", clearList: "Vaciar lista", remove: "Eliminar" },
   it: { addToCompare: "Aggiungi al confronto", added: "Aggiunto ✓", clearList: "Svuota lista", remove: "Rimuovi" },
@@ -76,6 +93,7 @@ function getStrings(): Strings {
   if (host.match(/geizhals\.at/)) return LOCALE_STRINGS.at;
   if (host.match(/cenowarka\./)) return LOCALE_STRINGS.pl;
   if (host.match(/billiger\./)) return LOCALE_STRINGS.de;
+  if (host.match(/guenstiger\./)) return LOCALE_STRINGS.de;
   const tld = host.split(".").pop() ?? "";
   return LOCALE_STRINGS[tld] ?? LOCALE_STRINGS.uk;
 }
@@ -83,10 +101,6 @@ function getStrings(): Strings {
 const strings = getStrings();
 
 let currentProductId: string | null = null;
-
-function extractProductId(): string | null {
-  return siteConfig.extractProductId();
-}
 
 function scrapeShopNames(): string[] {
   const offerLinks =
@@ -216,38 +230,8 @@ function highlightMatchingShops(matchingShopNames: Set<string>): void {
   });
 }
 
-function computeMatchingShops(
-  items: ProductItem[],
-  currentShops: string[],
-  excludeProductId?: string
-): Set<string> {
-  const filtered = excludeProductId
-    ? items.filter((item) => item.productId !== excludeProductId)
-    : items;
-  if (filtered.length === 0) return new Set();
-
-  const currentShopSet = new Set(currentShops);
-  const shopCounts = new Map<string, number>();
-
-  for (const item of filtered) {
-    for (const shop of item.shopNames) {
-      if (currentShopSet.has(shop)) {
-        shopCounts.set(shop, (shopCounts.get(shop) ?? 0) + 1);
-      }
-    }
-  }
-
-  const matching = new Set<string>();
-  for (const [shop, count] of shopCounts) {
-    if (count === filtered.length) {
-      matching.add(shop);
-    }
-  }
-  return matching;
-}
-
 async function initialize(): Promise<void> {
-  const productId = extractProductId();
+  const productId = siteConfig.extractProductId();
   if (productId === currentProductId) return;
   currentProductId = productId;
 
@@ -324,7 +308,7 @@ function waitForOffersAndInitialize(): void {
 }
 
 async function refreshHighlights(): Promise<void> {
-  const productId = extractProductId();
+  const productId = siteConfig.extractProductId();
   if (!productId) return;
   const items: ProductItem[] = await chrome.runtime.sendMessage({
     action: "getItems",
@@ -338,7 +322,7 @@ async function refreshHighlights(): Promise<void> {
 let knownOfferCount = 0;
 
 const domObserver = new MutationObserver(() => {
-  const newProductId = extractProductId();
+  const newProductId = siteConfig.extractProductId();
   if (newProductId !== currentProductId) {
     waitForOffersAndInitialize();
     return;
@@ -361,7 +345,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (!changes[siteConfig.storageKey]) return;
 
   const items: ProductItem[] = changes[siteConfig.storageKey].newValue ?? [];
-  const productId = extractProductId();
+  const productId = siteConfig.extractProductId();
   if (!productId) return;
 
   renderItemList(items);
@@ -373,3 +357,5 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
 });
 
 waitForOffersAndInitialize();
+
+}

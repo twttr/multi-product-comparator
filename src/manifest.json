@@ -28,7 +28,8 @@
         "*://*.geizhals.eu/*",
         "*://*.skinflint.co.uk/*",
         "*://*.cenowarka.pl/*",
-        "*://*.billiger.de/*"
+        "*://*.billiger.de/*",
+        "*://*.guenstiger.de/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

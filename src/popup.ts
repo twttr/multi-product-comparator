@@ -1,19 +1,23 @@
 import type { ProductItem, MessageRequest } from "./types.js";
+import { storageKeyFromHostname } from "./sites.js";
 
 const itemListEl = document.getElementById("item-list")!;
 const clearAllBtn = document.getElementById("clear-all")!;
 const emptyStateEl = document.getElementById("empty-state")!;
 
+function localizeUI(): void {
+  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    if (key) el.textContent = chrome.i18n.getMessage(key);
+  });
+}
+
 function storageKeyFromUrl(url: string): string | null {
   try {
-    const host = new URL(url).hostname;
-    if (host.match(/idealo\./)) return "items_idealo";
-    if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return "items_geizhals";
-    if (host.match(/billiger\./)) return "items_billiger";
+    return storageKeyFromHostname(new URL(url).hostname);
   } catch {
     return null;
   }
-  return null;
 }
 
 function renderItems(items: ProductItem[], storageKey: string): void {
@@ -40,7 +44,7 @@ function renderItems(items: ProductItem[], storageKey: string): void {
 
       const removeBtn = document.createElement("button");
       removeBtn.className = "remove-btn";
-      removeBtn.textContent = "Remove";
+      removeBtn.textContent = chrome.i18n.getMessage("popupRemove") || "Remove";
       removeBtn.addEventListener("click", async () => {
         const updated: ProductItem[] = await chrome.runtime.sendMessage({
           action: "removeItem",
@@ -58,6 +62,8 @@ function renderItems(items: ProductItem[], storageKey: string): void {
 }
 
 async function init(): Promise<void> {
+  localizeUI();
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const storageKey = storageKeyFromUrl(tab?.url ?? "");
   if (!storageKey) {

@@ -4,5 +4,17 @@
   },
   "extensionDescription": {
     "message": "Highlight shops that carry all your selected products"
+  },
+  "popupTitle": {
+    "message": "Compared Products"
+  },
+  "popupClearAll": {
+    "message": "Clear All"
+  },
+  "popupEmptyState": {
+    "message": "No products added yet. Visit a product page and click \"Add to Compare\"."
+  },
+  "popupRemove": {
+    "message": "Remove"
   }
 }

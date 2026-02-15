@@ -4,5 +4,17 @@
   },
   "extensionDescription": {
     "message": "Evidenzia i negozi che offrono tutti i prodotti selezionati"
+  },
+  "popupTitle": {
+    "message": "Prodotti confrontati"
+  },
+  "popupClearAll": {
+    "message": "Cancella tutto"
+  },
+  "popupEmptyState": {
+    "message": "Nessun prodotto aggiunto. Visita una pagina prodotto e clicca su \"Aggiungi al confronto\"."
+  },
+  "popupRemove": {
+    "message": "Rimuovi"
   }
 }

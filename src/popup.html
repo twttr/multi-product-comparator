@@ -1,17 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <div id="app">
-      <h2>Compared Products</h2>
+      <h2 data-i18n="popupTitle"></h2>
       <div id="item-list"></div>
-      <button id="clear-all">Clear All</button>
-      <div id="empty-state">
-        No products added yet. Visit a product page on idealo.de and click
-        "Add to Compare".
-      </div>
+      <button id="clear-all" data-i18n="popupClearAll"></button>
+      <div id="empty-state" data-i18n="popupEmptyState"></div>
     </div>
     <script src="popup.js"></script>
   </body>

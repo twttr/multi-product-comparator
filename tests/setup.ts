@@ -47,9 +47,14 @@ const runtimeMock = {
   },
 };
 
+const i18nMock = {
+  getMessage: vi.fn((key: string) => key),
+};
+
 globalThis.chrome = {
   storage: storageMock,
   runtime: runtimeMock,
+  i18n: i18nMock,
 } as unknown as typeof chrome;
 
 export function resetSessionStore(): void {

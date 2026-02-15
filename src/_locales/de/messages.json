@@ -3,6 +3,18 @@
     "message": "Mehrprodukt-Vergleich"
   },
   "extensionDescription": {
-    "message": "Hebt Shops hervor, die alle ausgew\u00e4hlten Produkte anbieten"
+    "message": "Hebt Shops hervor, die alle ausgewählten Produkte anbieten"
+  },
+  "popupTitle": {
+    "message": "Verglichene Produkte"
+  },
+  "popupClearAll": {
+    "message": "Alle löschen"
+  },
+  "popupEmptyState": {
+    "message": "Noch keine Produkte hinzugefügt. Besuche eine Produktseite und klicke auf \"Zum Vergleich hinzufügen\"."
+  },
+  "popupRemove": {
+    "message": "Entfernen"
   }
 }
