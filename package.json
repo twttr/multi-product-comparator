@@ -7,7 +7,8 @@
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "zip": "npm run build && cd dist && zip -r ../multi-product-comparator.zip . && cd .."
   },
   "devDependencies": {
     "chrome-types": "^0.1.327",
