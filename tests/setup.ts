@@ -23,6 +23,9 @@ const storageMock = {
         listener(changes, "session");
       }
     }),
+    remove: vi.fn(async (key: string) => {
+      delete sessionStore[key];
+    }),
     clear: vi.fn(async () => {
       for (const key of Object.keys(sessionStore)) {
         delete sessionStore[key];

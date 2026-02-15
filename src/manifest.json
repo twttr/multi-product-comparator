@@ -10,7 +10,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
   "background": {
     "service_worker": "background.js"
   },
@@ -22,7 +22,12 @@
         "*://*.idealo.es/*",
         "*://*.idealo.fr/*",
         "*://*.idealo.it/*",
-        "*://*.idealo.co.uk/*"
+        "*://*.idealo.co.uk/*",
+        "*://*.geizhals.de/*",
+        "*://*.geizhals.at/*",
+        "*://*.geizhals.eu/*",
+        "*://*.skinflint.co.uk/*",
+        "*://*.cenowarka.pl/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

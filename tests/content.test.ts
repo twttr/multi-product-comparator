@@ -231,3 +231,110 @@ describe("DOM scraping", () => {
     expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
   });
 });
+
+const GEIZHALS_OFFER_LINK_SELECTOR = ".offer_bt[data-merchant-name]";
+const GEIZHALS_SHOP_NAME_ATTR = "data-merchant-name";
+const GEIZHALS_OFFER_ROW_SELECTOR = ".offer";
+
+function extractGeizhalsProductId(pathname: string): string | null {
+  const match = pathname.match(/-a(\d+)\.html/);
+  return match ? match[1] : null;
+}
+
+describe("Geizhals product ID extraction", () => {
+  it("extracts product ID from geizhals URL", () => {
+    expect(extractGeizhalsProductId("/bomann-ksg-7291-a3573318.html")).toBe("3573318");
+  });
+
+  it("extracts product ID from URL with long path", () => {
+    expect(extractGeizhalsProductId("/some/path/product-name-a1234567.html")).toBe("1234567");
+  });
+
+  it("returns null for non-matching URL", () => {
+    expect(extractGeizhalsProductId("/some/other/page")).toBeNull();
+  });
+
+  it("returns null for URL without product ID pattern", () => {
+    expect(extractGeizhalsProductId("/category/list.html")).toBeNull();
+  });
+});
+
+describe("Geizhals DOM scraping", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  function createGeizhalsOfferRow(shopName: string): void {
+    const row = document.createElement("div");
+    row.className = "offer";
+    const link = document.createElement("a");
+    link.className = "offer_bt";
+    link.setAttribute("data-merchant-name", shopName);
+    link.href = "#";
+    row.appendChild(link);
+    document.body.appendChild(row);
+  }
+
+  function scrapeGeizhalsShopNames(): string[] {
+    const offerLinks =
+      document.querySelectorAll<HTMLAnchorElement>(GEIZHALS_OFFER_LINK_SELECTOR);
+    const shopNames = new Set<string>();
+    offerLinks.forEach((link) => {
+      const shopName = link.getAttribute(GEIZHALS_SHOP_NAME_ATTR);
+      if (shopName) {
+        shopNames.add(shopName);
+      }
+    });
+    return Array.from(shopNames);
+  }
+
+  function highlightGeizhalsMatchingShops(matchingShopNames: Set<string>): void {
+    const offerLinks =
+      document.querySelectorAll<HTMLAnchorElement>(GEIZHALS_OFFER_LINK_SELECTOR);
+    offerLinks.forEach((link) => {
+      const shopName = link.getAttribute(GEIZHALS_SHOP_NAME_ATTR);
+      if (shopName && matchingShopNames.has(shopName)) {
+        const row = link.closest(GEIZHALS_OFFER_ROW_SELECTOR);
+        if (row) {
+          row.classList.add("idealo-multi-highlight");
+        }
+      }
+    });
+  }
+
+  it("scrapes shop names from geizhals offer links", () => {
+    createGeizhalsOfferRow("Amazon");
+    createGeizhalsOfferRow("MediaMarkt");
+    createGeizhalsOfferRow("Saturn");
+    const names = scrapeGeizhalsShopNames();
+    expect(names).toEqual(["Amazon", "MediaMarkt", "Saturn"]);
+  });
+
+  it("deduplicates geizhals shop names", () => {
+    createGeizhalsOfferRow("Amazon");
+    createGeizhalsOfferRow("Amazon");
+    const names = scrapeGeizhalsShopNames();
+    expect(names).toEqual(["Amazon"]);
+  });
+
+  it("highlights matching geizhals shop rows", () => {
+    createGeizhalsOfferRow("Amazon");
+    createGeizhalsOfferRow("MediaMarkt");
+    createGeizhalsOfferRow("Saturn");
+
+    highlightGeizhalsMatchingShops(new Set(["Amazon", "Saturn"]));
+
+    const rows = document.querySelectorAll(".offer");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(true);
+    expect(rows[1].classList.contains("idealo-multi-highlight")).toBe(false);
+    expect(rows[2].classList.contains("idealo-multi-highlight")).toBe(true);
+  });
+
+  it("does not highlight when no geizhals matches", () => {
+    createGeizhalsOfferRow("Amazon");
+    highlightGeizhalsMatchingShops(new Set(["Notebooksbilliger"]));
+
+    const rows = document.querySelectorAll(".offer");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
+  });
+});

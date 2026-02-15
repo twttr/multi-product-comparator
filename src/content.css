@@ -89,5 +89,5 @@
 }
 
 .idealo-multi-highlight {
-  background-color: rgba(52, 168, 83, 0.08) !important;
+  box-shadow: inset 0 0 0 1000px rgba(52, 168, 83, 0.08) !important;
 }

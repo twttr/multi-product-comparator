@@ -4,7 +4,18 @@ const itemListEl = document.getElementById("item-list")!;
 const clearAllBtn = document.getElementById("clear-all")!;
 const emptyStateEl = document.getElementById("empty-state")!;
 
-function renderItems(items: ProductItem[]): void {
+function storageKeyFromUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    if (host.match(/idealo\./)) return "items_idealo";
+    if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return "items_geizhals";
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function renderItems(items: ProductItem[], storageKey: string): void {
   itemListEl.innerHTML = "";
   const hasItems = items.length > 0;
   emptyStateEl.style.display = hasItems ? "none" : "block";
@@ -32,9 +43,10 @@ function renderItems(items: ProductItem[]): void {
       removeBtn.addEventListener("click", async () => {
         const updated: ProductItem[] = await chrome.runtime.sendMessage({
           action: "removeItem",
+          storageKey,
           productId: item.productId,
         } satisfies MessageRequest);
-        renderItems(updated);
+        renderItems(updated, storageKey);
       });
 
       row.appendChild(link);
@@ -45,17 +57,27 @@ function renderItems(items: ProductItem[]): void {
 }
 
 async function init(): Promise<void> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const storageKey = storageKeyFromUrl(tab?.url ?? "");
+  if (!storageKey) {
+    emptyStateEl.style.display = "block";
+    clearAllBtn.style.display = "none";
+    return;
+  }
+
   const items: ProductItem[] = await chrome.runtime.sendMessage({
     action: "getItems",
+    storageKey,
   } satisfies MessageRequest);
-  renderItems(items);
+  renderItems(items, storageKey);
+
+  clearAllBtn.addEventListener("click", async () => {
+    await chrome.runtime.sendMessage({
+      action: "clearAll",
+      storageKey,
+    } satisfies MessageRequest);
+    renderItems([], storageKey);
+  });
 }
 
 init();
-
-clearAllBtn.addEventListener("click", async () => {
-  await chrome.runtime.sendMessage({
-    action: "clearAll",
-  } satisfies MessageRequest);
-  renderItems([]);
-});

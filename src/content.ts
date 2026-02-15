@@ -1,10 +1,41 @@
-import type { ProductItem, MessageRequest } from "./types.js";
+import type { ProductItem, MessageRequest, SiteConfig } from "./types.js";
 
-const OFFER_LINK_SELECTOR =
-  ".productOffers-listItemOfferLink[data-shop-name]";
-const SHOP_NAME_ATTR = "data-shop-name";
-const OFFER_ROW_SELECTOR = ".productOffers-listItem";
-const STORAGE_KEY = "items";
+const idealoConfig: SiteConfig = {
+  storageKey: "items_idealo",
+  offerLinkSelector: ".productOffers-listItemOfferLink[data-shop-name]",
+  shopNameAttr: "data-shop-name",
+  offerRowSelector: ".productOffers-listItem",
+  extractProductId: () => {
+    const firstOffer = document.querySelector<HTMLAnchorElement>(
+      idealoConfig.offerLinkSelector
+    );
+    if (!firstOffer) return null;
+    const url = new URL(firstOffer.href, window.location.origin);
+    return url.searchParams.get("productid");
+  },
+};
+
+const geizhalsConfig: SiteConfig = {
+  storageKey: "items_geizhals",
+  offerLinkSelector: ".offer_bt[data-merchant-name]",
+  shopNameAttr: "data-merchant-name",
+  offerRowSelector: ".offer",
+  extractProductId: () => {
+    const match = window.location.pathname.match(/-a(\d+)\.html/);
+    return match ? match[1] : null;
+  },
+};
+
+function detectSite(): SiteConfig | null {
+  const host = window.location.hostname;
+  if (host.match(/idealo\./)) return idealoConfig;
+  if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return geizhalsConfig;
+  return null;
+}
+
+const detectedSite = detectSite();
+if (!detectedSite) throw new Error("Unsupported site");
+const siteConfig: SiteConfig = detectedSite;
 
 interface Strings {
   addToCompare: string;
@@ -14,17 +45,21 @@ interface Strings {
 }
 
 const LOCALE_STRINGS: Record<string, Strings> = {
-  de: { addToCompare: "Zum Vergleich hinzuf\u00fcgen", added: "Hinzugef\u00fcgt \u2713", clearList: "Liste leeren", remove: "Entfernen" },
-  at: { addToCompare: "Zum Vergleich hinzuf\u00fcgen", added: "Hinzugef\u00fcgt \u2713", clearList: "Liste leeren", remove: "Entfernen" },
-  fr: { addToCompare: "Ajouter au comparatif", added: "Ajout\u00e9 \u2713", clearList: "Vider la liste", remove: "Supprimer" },
-  es: { addToCompare: "A\u00f1adir a la comparaci\u00f3n", added: "A\u00f1adido \u2713", clearList: "Vaciar lista", remove: "Eliminar" },
-  it: { addToCompare: "Aggiungi al confronto", added: "Aggiunto \u2713", clearList: "Svuota lista", remove: "Rimuovi" },
-  uk: { addToCompare: "Add to Compare", added: "Added \u2713", clearList: "Clear List", remove: "Remove" },
+  de: { addToCompare: "Zum Vergleich hinzufügen", added: "Hinzugefügt ✓", clearList: "Liste leeren", remove: "Entfernen" },
+  at: { addToCompare: "Zum Vergleich hinzufügen", added: "Hinzugefügt ✓", clearList: "Liste leeren", remove: "Entfernen" },
+  fr: { addToCompare: "Ajouter au comparatif", added: "Ajouté ✓", clearList: "Vider la liste", remove: "Supprimer" },
+  es: { addToCompare: "Añadir a la comparación", added: "Añadido ✓", clearList: "Vaciar lista", remove: "Eliminar" },
+  it: { addToCompare: "Aggiungi al confronto", added: "Aggiunto ✓", clearList: "Svuota lista", remove: "Rimuovi" },
+  uk: { addToCompare: "Add to Compare", added: "Added ✓", clearList: "Clear List", remove: "Remove" },
+  pl: { addToCompare: "Dodaj do porównania", added: "Dodano ✓", clearList: "Wyczyść listę", remove: "Usuń" },
 };
 
 function getStrings(): Strings {
   const host = window.location.hostname;
   if (host.endsWith(".co.uk")) return LOCALE_STRINGS.uk;
+  if (host.match(/geizhals\.(de|eu)/)) return LOCALE_STRINGS.de;
+  if (host.match(/geizhals\.at/)) return LOCALE_STRINGS.at;
+  if (host.match(/cenowarka\./)) return LOCALE_STRINGS.pl;
   const tld = host.split(".").pop() ?? "";
   return LOCALE_STRINGS[tld] ?? LOCALE_STRINGS.uk;
 }
@@ -34,20 +69,15 @@ const strings = getStrings();
 let currentProductId: string | null = null;
 
 function extractProductId(): string | null {
-  const firstOffer = document.querySelector<HTMLAnchorElement>(
-    OFFER_LINK_SELECTOR
-  );
-  if (!firstOffer) return null;
-  const url = new URL(firstOffer.href, window.location.origin);
-  return url.searchParams.get("productid");
+  return siteConfig.extractProductId();
 }
 
 function scrapeShopNames(): string[] {
   const offerLinks =
-    document.querySelectorAll<HTMLAnchorElement>(OFFER_LINK_SELECTOR);
+    document.querySelectorAll<HTMLAnchorElement>(siteConfig.offerLinkSelector);
   const shopNames = new Set<string>();
   offerLinks.forEach((link) => {
-    const shopName = link.getAttribute(SHOP_NAME_ATTR);
+    const shopName = link.getAttribute(siteConfig.shopNameAttr);
     if (shopName) {
       shopNames.add(shopName);
     }
@@ -78,6 +108,7 @@ function createPanel(): HTMLDivElement {
   clearBtn.addEventListener("click", async () => {
     await chrome.runtime.sendMessage({
       action: "clearAll",
+      storageKey: siteConfig.storageKey,
     } satisfies MessageRequest);
     renderItemList([]);
     refreshHighlights();
@@ -120,6 +151,7 @@ function renderItemList(items: ProductItem[]): void {
       removeBtn.addEventListener("click", async () => {
         const updated: ProductItem[] = await chrome.runtime.sendMessage({
           action: "removeItem",
+          storageKey: siteConfig.storageKey,
           productId: item.productId,
         } satisfies MessageRequest);
         renderItemList(updated);
@@ -156,11 +188,11 @@ function highlightMatchingShops(matchingShopNames: Set<string>): void {
   if (matchingShopNames.size === 0) return;
 
   const offerLinks =
-    document.querySelectorAll<HTMLAnchorElement>(OFFER_LINK_SELECTOR);
+    document.querySelectorAll<HTMLAnchorElement>(siteConfig.offerLinkSelector);
   offerLinks.forEach((link) => {
-    const shopName = link.getAttribute(SHOP_NAME_ATTR);
+    const shopName = link.getAttribute(siteConfig.shopNameAttr);
     if (shopName && matchingShopNames.has(shopName)) {
-      const row = link.closest(OFFER_ROW_SELECTOR);
+      const row = link.closest(siteConfig.offerRowSelector);
       if (row) {
         row.classList.add("idealo-multi-highlight");
       }
@@ -205,7 +237,7 @@ async function initialize(): Promise<void> {
 
   clearHighlights();
   removePanel();
-  knownOfferCount = document.querySelectorAll(OFFER_LINK_SELECTOR).length;
+  knownOfferCount = document.querySelectorAll(siteConfig.offerLinkSelector).length;
 
   if (!productId) return;
 
@@ -216,6 +248,7 @@ async function initialize(): Promise<void> {
 
   const items: ProductItem[] = await chrome.runtime.sendMessage({
     action: "getItems",
+    storageKey: siteConfig.storageKey,
   } satisfies MessageRequest);
 
   renderItemList(items);
@@ -237,6 +270,7 @@ async function initialize(): Promise<void> {
     };
     const updatedItems: ProductItem[] = await chrome.runtime.sendMessage({
       action: "addItem",
+      storageKey: siteConfig.storageKey,
       item: newItem,
     } satisfies MessageRequest);
     updateAddButtonState(updatedItems);
@@ -249,7 +283,7 @@ async function initialize(): Promise<void> {
 
 function waitForOffersAndInitialize(): void {
   const checkOffers = () => {
-    const offers = document.querySelectorAll(OFFER_LINK_SELECTOR);
+    const offers = document.querySelectorAll(siteConfig.offerLinkSelector);
     if (offers.length > 0) {
       initialize();
       return true;
@@ -278,6 +312,7 @@ async function refreshHighlights(): Promise<void> {
   if (!productId) return;
   const items: ProductItem[] = await chrome.runtime.sendMessage({
     action: "getItems",
+    storageKey: siteConfig.storageKey,
   } satisfies MessageRequest);
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
@@ -293,7 +328,7 @@ const domObserver = new MutationObserver(() => {
     return;
   }
 
-  const currentCount = document.querySelectorAll(OFFER_LINK_SELECTOR).length;
+  const currentCount = document.querySelectorAll(siteConfig.offerLinkSelector).length;
   if (currentCount > knownOfferCount) {
     knownOfferCount = currentCount;
     refreshHighlights();
@@ -307,9 +342,9 @@ domObserver.observe(document.body, {
 
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (areaName !== "session") return;
-  if (!changes[STORAGE_KEY]) return;
+  if (!changes[siteConfig.storageKey]) return;
 
-  const items: ProductItem[] = changes[STORAGE_KEY].newValue ?? [];
+  const items: ProductItem[] = changes[siteConfig.storageKey].newValue ?? [];
   const productId = extractProductId();
   if (!productId) return;
 

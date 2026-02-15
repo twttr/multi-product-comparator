@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { resetSessionStore } from "./setup.js";
 
+const KEY = "items_idealo";
+
 let handleMessage: (message: unknown) => Promise<unknown>;
 
 beforeEach(async () => {
@@ -23,7 +25,7 @@ beforeEach(async () => {
 
 describe("background message handler", () => {
   it("returns empty array for getItems when no items stored", async () => {
-    const result = await handleMessage({ action: "getItems" });
+    const result = await handleMessage({ action: "getItems", storageKey: KEY });
     expect(result).toEqual([]);
   });
 
@@ -35,7 +37,7 @@ describe("background message handler", () => {
       shopNames: ["shopA", "shopB"],
       addedAt: Date.now(),
     };
-    const result = await handleMessage({ action: "addItem", item });
+    const result = await handleMessage({ action: "addItem", storageKey: KEY, item });
     expect(result).toHaveLength(1);
     expect((result as Array<unknown>)[0]).toEqual(item);
   });
@@ -48,8 +50,8 @@ describe("background message handler", () => {
       shopNames: ["shopA"],
       addedAt: Date.now(),
     };
-    await handleMessage({ action: "addItem", item });
-    const result = await handleMessage({ action: "getItems" });
+    await handleMessage({ action: "addItem", storageKey: KEY, item });
+    const result = await handleMessage({ action: "getItems", storageKey: KEY });
     expect(result).toHaveLength(1);
   });
 
@@ -68,11 +70,12 @@ describe("background message handler", () => {
       shopNames: ["shopB"],
       addedAt: Date.now(),
     };
-    await handleMessage({ action: "addItem", item: item1 });
-    await handleMessage({ action: "addItem", item: item2 });
+    await handleMessage({ action: "addItem", storageKey: KEY, item: item1 });
+    await handleMessage({ action: "addItem", storageKey: KEY, item: item2 });
 
     const result = await handleMessage({
       action: "removeItem",
+      storageKey: KEY,
       productId: "1",
     });
     expect(result).toHaveLength(1);
@@ -87,8 +90,8 @@ describe("background message handler", () => {
       shopNames: ["shopA"],
       addedAt: Date.now(),
     };
-    await handleMessage({ action: "addItem", item });
-    const result = await handleMessage({ action: "clearAll" });
+    await handleMessage({ action: "addItem", storageKey: KEY, item });
+    const result = await handleMessage({ action: "clearAll", storageKey: KEY });
     expect(result).toEqual([]);
   });
 

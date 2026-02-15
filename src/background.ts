@@ -15,13 +15,13 @@ chrome.runtime.onMessage.addListener(
 async function handleMessage(message: MessageRequest): Promise<unknown> {
   switch (message.action) {
     case "addItem":
-      return addItem(message.item);
+      return addItem(message.storageKey, message.item);
     case "getItems":
-      return getItems();
+      return getItems(message.storageKey);
     case "removeItem":
-      return removeItem(message.productId);
+      return removeItem(message.storageKey, message.productId);
     case "clearAll":
-      await clearAll();
+      await clearAll(message.storageKey);
       return [];
     default:
       return null;
