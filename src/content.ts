@@ -100,7 +100,7 @@ function getStrings(): Strings {
 
 const strings = getStrings();
 
-let currentProductId: string | null = null;
+let currentProductId: string | null | undefined;
 
 function scrapeShopNames(): string[] {
   const offerLinks =
@@ -239,8 +239,6 @@ async function initialize(): Promise<void> {
   removePanel();
   knownOfferCount = document.querySelectorAll(siteConfig.offerLinkSelector).length;
 
-  if (!productId) return;
-
   const panel = createPanel();
   const addBtn = panel.querySelector(
     "#idealo-multi-add-btn"
@@ -252,6 +250,12 @@ async function initialize(): Promise<void> {
   } satisfies MessageRequest);
 
   renderItemList(items);
+
+  if (!productId) {
+    addBtn.style.display = "none";
+    return;
+  }
+
   updateAddButtonState(items);
 
   const currentShops = scrapeShopNames();
@@ -324,6 +328,7 @@ let knownOfferCount = 0;
 const domObserver = new MutationObserver(() => {
   const newProductId = siteConfig.extractProductId();
   if (newProductId !== currentProductId) {
+    initialize();
     waitForOffersAndInitialize();
     return;
   }
@@ -345,10 +350,11 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (!changes[siteConfig.storageKey]) return;
 
   const items: ProductItem[] = changes[siteConfig.storageKey].newValue ?? [];
+  renderItemList(items);
+
   const productId = siteConfig.extractProductId();
   if (!productId) return;
 
-  renderItemList(items);
   updateAddButtonState(items);
 
   const currentShops = scrapeShopNames();
@@ -356,6 +362,7 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   highlightMatchingShops(matching);
 });
 
+initialize();
 waitForOffersAndInitialize();
 
 }
