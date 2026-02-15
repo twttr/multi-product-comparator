@@ -9,6 +9,7 @@ function storageKeyFromUrl(url: string): string | null {
     const host = new URL(url).hostname;
     if (host.match(/idealo\./)) return "items_idealo";
     if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return "items_geizhals";
+    if (host.match(/billiger\./)) return "items_billiger";
   } catch {
     return null;
   }

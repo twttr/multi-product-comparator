@@ -3,7 +3,7 @@ import type { ProductItem, MessageRequest, SiteConfig } from "./types.js";
 const idealoConfig: SiteConfig = {
   storageKey: "items_idealo",
   offerLinkSelector: ".productOffers-listItemOfferLink[data-shop-name]",
-  shopNameAttr: "data-shop-name",
+  extractShopName: (el) => el.getAttribute("data-shop-name"),
   offerRowSelector: ".productOffers-listItem",
   extractProductId: () => {
     const firstOffer = document.querySelector<HTMLAnchorElement>(
@@ -18,7 +18,7 @@ const idealoConfig: SiteConfig = {
 const geizhalsConfig: SiteConfig = {
   storageKey: "items_geizhals",
   offerLinkSelector: ".offer_bt[data-merchant-name]",
-  shopNameAttr: "data-merchant-name",
+  extractShopName: (el) => el.getAttribute("data-merchant-name"),
   offerRowSelector: ".offer",
   extractProductId: () => {
     const match = window.location.pathname.match(/-a(\d+)\.html/);
@@ -26,10 +26,25 @@ const geizhalsConfig: SiteConfig = {
   },
 };
 
+const billigerConfig: SiteConfig = {
+  storageKey: "items_billiger",
+  offerLinkSelector: "[data-offer-row] img[data-bde-image]",
+  extractShopName: (el) => el.getAttribute("alt")?.replace(/^Shop /, "") ?? null,
+  offerRowSelector: "[data-offer-row]",
+  extractProductId: () => {
+    const path = window.location.pathname;
+    const baseMatch = path.match(/\/(?:base)?products\/(\d+)/);
+    if (baseMatch) return baseMatch[1];
+    const htmlMatch = path.match(/(\d+)\.html$/);
+    return htmlMatch ? htmlMatch[1] : null;
+  },
+};
+
 function detectSite(): SiteConfig | null {
   const host = window.location.hostname;
   if (host.match(/idealo\./)) return idealoConfig;
   if (host.match(/geizhals\./) || host.match(/skinflint\./) || host.match(/cenowarka\./)) return geizhalsConfig;
+  if (host.match(/billiger\./)) return billigerConfig;
   return null;
 }
 
@@ -60,6 +75,7 @@ function getStrings(): Strings {
   if (host.match(/geizhals\.(de|eu)/)) return LOCALE_STRINGS.de;
   if (host.match(/geizhals\.at/)) return LOCALE_STRINGS.at;
   if (host.match(/cenowarka\./)) return LOCALE_STRINGS.pl;
+  if (host.match(/billiger\./)) return LOCALE_STRINGS.de;
   const tld = host.split(".").pop() ?? "";
   return LOCALE_STRINGS[tld] ?? LOCALE_STRINGS.uk;
 }
@@ -74,10 +90,10 @@ function extractProductId(): string | null {
 
 function scrapeShopNames(): string[] {
   const offerLinks =
-    document.querySelectorAll<HTMLAnchorElement>(siteConfig.offerLinkSelector);
+    document.querySelectorAll(siteConfig.offerLinkSelector);
   const shopNames = new Set<string>();
-  offerLinks.forEach((link) => {
-    const shopName = link.getAttribute(siteConfig.shopNameAttr);
+  offerLinks.forEach((el) => {
+    const shopName = siteConfig.extractShopName(el);
     if (shopName) {
       shopNames.add(shopName);
     }
@@ -188,11 +204,11 @@ function highlightMatchingShops(matchingShopNames: Set<string>): void {
   if (matchingShopNames.size === 0) return;
 
   const offerLinks =
-    document.querySelectorAll<HTMLAnchorElement>(siteConfig.offerLinkSelector);
-  offerLinks.forEach((link) => {
-    const shopName = link.getAttribute(siteConfig.shopNameAttr);
+    document.querySelectorAll(siteConfig.offerLinkSelector);
+  offerLinks.forEach((el) => {
+    const shopName = siteConfig.extractShopName(el);
     if (shopName && matchingShopNames.has(shopName)) {
-      const row = link.closest(siteConfig.offerRowSelector);
+      const row = el.closest(siteConfig.offerRowSelector);
       if (row) {
         row.classList.add("idealo-multi-highlight");
       }

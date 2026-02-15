@@ -233,8 +233,8 @@ describe("DOM scraping", () => {
 });
 
 const GEIZHALS_OFFER_LINK_SELECTOR = ".offer_bt[data-merchant-name]";
-const GEIZHALS_SHOP_NAME_ATTR = "data-merchant-name";
 const GEIZHALS_OFFER_ROW_SELECTOR = ".offer";
+const extractGeizhalsShopName = (el: Element) => el.getAttribute("data-merchant-name");
 
 function extractGeizhalsProductId(pathname: string): string | null {
   const match = pathname.match(/-a(\d+)\.html/);
@@ -276,28 +276,22 @@ describe("Geizhals DOM scraping", () => {
   }
 
   function scrapeGeizhalsShopNames(): string[] {
-    const offerLinks =
-      document.querySelectorAll<HTMLAnchorElement>(GEIZHALS_OFFER_LINK_SELECTOR);
+    const offerLinks = document.querySelectorAll(GEIZHALS_OFFER_LINK_SELECTOR);
     const shopNames = new Set<string>();
-    offerLinks.forEach((link) => {
-      const shopName = link.getAttribute(GEIZHALS_SHOP_NAME_ATTR);
-      if (shopName) {
-        shopNames.add(shopName);
-      }
+    offerLinks.forEach((el) => {
+      const shopName = extractGeizhalsShopName(el);
+      if (shopName) shopNames.add(shopName);
     });
     return Array.from(shopNames);
   }
 
   function highlightGeizhalsMatchingShops(matchingShopNames: Set<string>): void {
-    const offerLinks =
-      document.querySelectorAll<HTMLAnchorElement>(GEIZHALS_OFFER_LINK_SELECTOR);
-    offerLinks.forEach((link) => {
-      const shopName = link.getAttribute(GEIZHALS_SHOP_NAME_ATTR);
+    const offerLinks = document.querySelectorAll(GEIZHALS_OFFER_LINK_SELECTOR);
+    offerLinks.forEach((el) => {
+      const shopName = extractGeizhalsShopName(el);
       if (shopName && matchingShopNames.has(shopName)) {
-        const row = link.closest(GEIZHALS_OFFER_ROW_SELECTOR);
-        if (row) {
-          row.classList.add("idealo-multi-highlight");
-        }
+        const row = el.closest(GEIZHALS_OFFER_ROW_SELECTOR);
+        if (row) row.classList.add("idealo-multi-highlight");
       }
     });
   }
@@ -335,6 +329,128 @@ describe("Geizhals DOM scraping", () => {
     highlightGeizhalsMatchingShops(new Set(["Notebooksbilliger"]));
 
     const rows = document.querySelectorAll(".offer");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
+  });
+});
+
+const BILLIGER_OFFER_LINK_SELECTOR = "[data-offer-row] img[data-bde-image]";
+const BILLIGER_OFFER_ROW_SELECTOR = "[data-offer-row]";
+const extractBilligerShopName = (el: Element) =>
+  el.getAttribute("alt")?.replace(/^Shop /, "") ?? null;
+
+function extractBilligerProductId(pathname: string): string | null {
+  const baseMatch = pathname.match(/\/(?:base)?products\/(\d+)/);
+  if (baseMatch) return baseMatch[1];
+  const htmlMatch = pathname.match(/(\d+)\.html$/);
+  return htmlMatch ? htmlMatch[1] : null;
+}
+
+describe("Billiger product ID extraction", () => {
+  it("extracts product ID from baseproducts URL", () => {
+    expect(extractBilligerProductId("/baseproducts/109366-samsung-galaxy-s25-ultra-5g")).toBe("109366");
+  });
+
+  it("extracts product ID from products URL", () => {
+    expect(extractBilligerProductId("/products/5048601426-apple-iphone-16-128-gb-ultramarin")).toBe("5048601426");
+  });
+
+  it("extracts product ID from produkt URL", () => {
+    expect(extractBilligerProductId("/produkt/samsung-galaxy-s25-ultra-4373-5173800034.html")).toBe("5173800034");
+  });
+
+  it("returns null for non-matching URL", () => {
+    expect(extractBilligerProductId("/kategorie/handys/")).toBeNull();
+  });
+});
+
+describe("Billiger shop name extraction", () => {
+  it("extracts shop name from alt attribute", () => {
+    const img = document.createElement("img");
+    img.setAttribute("alt", "Shop ebay.de");
+    expect(extractBilligerShopName(img)).toBe("ebay.de");
+  });
+
+  it("handles shop name without prefix", () => {
+    const img = document.createElement("img");
+    img.setAttribute("alt", "Amazon");
+    expect(extractBilligerShopName(img)).toBe("Amazon");
+  });
+
+  it("returns null when no alt attribute", () => {
+    const img = document.createElement("img");
+    expect(extractBilligerShopName(img)).toBeNull();
+  });
+});
+
+describe("Billiger DOM scraping", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  function createBilligerOfferRow(shopName: string): void {
+    const row = document.createElement("div");
+    row.setAttribute("data-offer-row", "");
+    const img = document.createElement("img");
+    img.setAttribute("data-bde-image", "");
+    img.setAttribute("alt", `Shop ${shopName}`);
+    row.appendChild(img);
+    document.body.appendChild(row);
+  }
+
+  function scrapeBilligerShopNames(): string[] {
+    const offerLinks = document.querySelectorAll(BILLIGER_OFFER_LINK_SELECTOR);
+    const shopNames = new Set<string>();
+    offerLinks.forEach((el) => {
+      const shopName = extractBilligerShopName(el);
+      if (shopName) shopNames.add(shopName);
+    });
+    return Array.from(shopNames);
+  }
+
+  function highlightBilligerMatchingShops(matchingShopNames: Set<string>): void {
+    const offerLinks = document.querySelectorAll(BILLIGER_OFFER_LINK_SELECTOR);
+    offerLinks.forEach((el) => {
+      const shopName = extractBilligerShopName(el);
+      if (shopName && matchingShopNames.has(shopName)) {
+        const row = el.closest(BILLIGER_OFFER_ROW_SELECTOR);
+        if (row) row.classList.add("idealo-multi-highlight");
+      }
+    });
+  }
+
+  it("scrapes shop names from billiger offer rows", () => {
+    createBilligerOfferRow("ebay.de");
+    createBilligerOfferRow("Amazon");
+    createBilligerOfferRow("MediaMarkt");
+    const names = scrapeBilligerShopNames();
+    expect(names).toEqual(["ebay.de", "Amazon", "MediaMarkt"]);
+  });
+
+  it("deduplicates billiger shop names", () => {
+    createBilligerOfferRow("ebay.de");
+    createBilligerOfferRow("ebay.de");
+    const names = scrapeBilligerShopNames();
+    expect(names).toEqual(["ebay.de"]);
+  });
+
+  it("highlights matching billiger shop rows", () => {
+    createBilligerOfferRow("ebay.de");
+    createBilligerOfferRow("Amazon");
+    createBilligerOfferRow("MediaMarkt");
+
+    highlightBilligerMatchingShops(new Set(["ebay.de", "MediaMarkt"]));
+
+    const rows = document.querySelectorAll("[data-offer-row]");
+    expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(true);
+    expect(rows[1].classList.contains("idealo-multi-highlight")).toBe(false);
+    expect(rows[2].classList.contains("idealo-multi-highlight")).toBe(true);
+  });
+
+  it("does not highlight when no billiger matches", () => {
+    createBilligerOfferRow("ebay.de");
+    highlightBilligerMatchingShops(new Set(["Saturn"]));
+
+    const rows = document.querySelectorAll("[data-offer-row]");
     expect(rows[0].classList.contains("idealo-multi-highlight")).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ export interface ProductItem {
 export interface SiteConfig {
   storageKey: string;
   offerLinkSelector: string;
-  shopNameAttr: string;
+  extractShopName: (el: Element) => string | null;
   offerRowSelector: string;
   extractProductId: () => string | null;
 }

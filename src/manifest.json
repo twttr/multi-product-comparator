@@ -27,7 +27,8 @@
         "*://*.geizhals.at/*",
         "*://*.geizhals.eu/*",
         "*://*.skinflint.co.uk/*",
-        "*://*.cenowarka.pl/*"
+        "*://*.cenowarka.pl/*",
+        "*://*.billiger.de/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
