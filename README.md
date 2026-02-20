@@ -34,6 +34,12 @@ Each site maintains its own separate compare list. UI is localized to match each
 
 ## Installation
 
+### Chrome Web Store
+
+Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/multi-product-comparator/lfhmkmgoijdimelfkdifilelcmcfbfdf).
+
+### Manual
+
 ```bash
 git clone git@github.com:twttr/multi-product-comparator.git
 cd multi-product-comparator
