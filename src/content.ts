@@ -345,7 +345,7 @@ domObserver.observe(document.body, {
   subtree: true,
 });
 
-chrome.storage.onChanged.addListener(async (changes, areaName) => {
+const storageChangeListener = async (changes: Record<string, chrome.storage.StorageChange>, areaName: string): Promise<void> => {
   if (areaName !== "session") return;
   if (!changes[siteConfig.storageKey]) return;
 
@@ -360,6 +360,14 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
   highlightMatchingShops(matching);
+};
+
+chrome.storage.onChanged.addListener(storageChangeListener);
+
+// Cleanup observers and listeners when the page is unloaded to prevent memory leaks
+window.addEventListener("unload", () => {
+  domObserver.disconnect();
+  chrome.storage.onChanged.removeListener(storageChangeListener);
 });
 
 initialize();
