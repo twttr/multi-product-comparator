@@ -55,11 +55,17 @@ function renderItems(items: ProductItem[], storageKey: string): void {
       removeBtn.className = "remove-btn";
       removeBtn.textContent = chrome.i18n.getMessage("popupRemove") || "Remove";
       removeBtn.addEventListener("click", async () => {
-        const updated: ProductItem[] = await chrome.runtime.sendMessage({
-          action: "removeItem",
-          storageKey,
-          productId: item.productId,
-        } satisfies MessageRequest);
+        let updated: ProductItem[];
+        try {
+          updated = await chrome.runtime.sendMessage({
+            action: "removeItem",
+            storageKey,
+            productId: item.productId,
+          } satisfies MessageRequest);
+        } catch (err) {
+          console.error("[multi-product-comparator] removeItem failed:", err);
+          return;
+        }
         renderItems(updated, storageKey);
       });
 
@@ -81,17 +87,30 @@ async function init(): Promise<void> {
     return;
   }
 
-  const items: ProductItem[] = await chrome.runtime.sendMessage({
-    action: "getItems",
-    storageKey,
-  } satisfies MessageRequest);
+  let items: ProductItem[];
+  try {
+    items = await chrome.runtime.sendMessage({
+      action: "getItems",
+      storageKey,
+    } satisfies MessageRequest);
+  } catch (err) {
+    console.error("[multi-product-comparator] getItems failed:", err);
+    emptyStateEl.style.display = "block";
+    clearAllBtn.style.display = "none";
+    return;
+  }
   renderItems(items, storageKey);
 
   clearAllBtn.addEventListener("click", async () => {
-    await chrome.runtime.sendMessage({
-      action: "clearAll",
-      storageKey,
-    } satisfies MessageRequest);
+    try {
+      await chrome.runtime.sendMessage({
+        action: "clearAll",
+        storageKey,
+      } satisfies MessageRequest);
+    } catch (err) {
+      console.error("[multi-product-comparator] clearAll failed:", err);
+      return;
+    }
     renderItems([], storageKey);
   });
 }
