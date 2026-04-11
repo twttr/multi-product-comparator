@@ -101,6 +101,7 @@ function getStrings(): Strings {
 const strings = getStrings();
 
 let currentProductId: string | null | undefined;
+let isInitializing = false;
 
 function scrapeShopNames(): string[] {
   const offerLinks =
@@ -242,8 +243,12 @@ function highlightMatchingShops(matchingShopNames: Set<string>): void {
 }
 
 async function initialize(): Promise<void> {
+  // Guard against concurrent calls (race condition between domObserver and
+  // waitForOffersAndInitialize both triggering initialize simultaneously)
+  if (isInitializing) return;
   const productId = siteConfig.extractProductId();
   if (productId === currentProductId) return;
+  isInitializing = true;
   currentProductId = productId;
 
   clearHighlights();
@@ -263,6 +268,7 @@ async function initialize(): Promise<void> {
     } satisfies MessageRequest);
   } catch (err) {
     console.error("[multi-product-comparator] getItems failed:", err);
+    isInitializing = false;
     return;
   }
 
@@ -270,6 +276,7 @@ async function initialize(): Promise<void> {
 
   if (!productId) {
     addBtn.style.display = "none";
+    isInitializing = false;
     return;
   }
 
@@ -278,6 +285,8 @@ async function initialize(): Promise<void> {
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
   highlightMatchingShops(matching);
+
+  isInitializing = false;
 
   addBtn.addEventListener("click", async () => {
     const shopNames = scrapeShopNames();
@@ -357,7 +366,9 @@ let knownOfferCount = 0;
 const domObserver = new MutationObserver(() => {
   const newProductId = siteConfig.extractProductId();
   if (newProductId !== currentProductId) {
-    initialize();
+    // Use waitForOffersAndInitialize which calls initialize() once offers are present.
+    // Do NOT call initialize() directly here to avoid a race condition where both
+    // run concurrently (initialize would start before offers are in the DOM).
     waitForOffersAndInitialize();
     return;
   }
@@ -399,7 +410,9 @@ window.addEventListener("unload", () => {
   chrome.storage.onChanged.removeListener(storageChangeListener);
 });
 
-initialize();
+// Use waitForOffersAndInitialize as the sole entry point: it calls initialize()
+// as soon as offers are detected, or immediately if they're already present.
+// Calling initialize() separately would race against waitForOffersAndInitialize.
 waitForOffersAndInitialize();
 
 }
