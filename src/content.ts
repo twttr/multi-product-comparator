@@ -101,6 +101,7 @@ function getStrings(): Strings {
 const strings = getStrings();
 
 let currentProductId: string | null | undefined;
+let isInitializing = false;
 
 function scrapeShopNames(): string[] {
   const offerLinks =
@@ -136,10 +137,15 @@ function createPanel(): HTMLDivElement {
   clearBtn.id = "idealo-multi-clear-btn";
   clearBtn.textContent = strings.clearList;
   clearBtn.addEventListener("click", async () => {
-    await chrome.runtime.sendMessage({
-      action: "clearAll",
-      storageKey: siteConfig.storageKey,
-    } satisfies MessageRequest);
+    try {
+      await chrome.runtime.sendMessage({
+        action: "clearAll",
+        storageKey: siteConfig.storageKey,
+      } satisfies MessageRequest);
+    } catch (err) {
+      console.error("[multi-product-comparator] clearAll failed:", err);
+      return;
+    }
     renderItemList([]);
     refreshHighlights();
   });
@@ -179,11 +185,17 @@ function renderItemList(items: ProductItem[]): void {
       removeBtn.textContent = "\u00d7";
       removeBtn.title = strings.remove;
       removeBtn.addEventListener("click", async () => {
-        const updated: ProductItem[] = await chrome.runtime.sendMessage({
-          action: "removeItem",
-          storageKey: siteConfig.storageKey,
-          productId: item.productId,
-        } satisfies MessageRequest);
+        let updated: ProductItem[];
+        try {
+          updated = await chrome.runtime.sendMessage({
+            action: "removeItem",
+            storageKey: siteConfig.storageKey,
+            productId: item.productId,
+          } satisfies MessageRequest);
+        } catch (err) {
+          console.error("[multi-product-comparator] removeItem failed:", err);
+          return;
+        }
         renderItemList(updated);
         updateAddButtonState(updated);
         refreshHighlights();
@@ -231,8 +243,12 @@ function highlightMatchingShops(matchingShopNames: Set<string>): void {
 }
 
 async function initialize(): Promise<void> {
+  // Guard against concurrent calls (race condition between domObserver and
+  // waitForOffersAndInitialize both triggering initialize simultaneously)
+  if (isInitializing) return;
   const productId = siteConfig.extractProductId();
   if (productId === currentProductId) return;
+  isInitializing = true;
   currentProductId = productId;
 
   clearHighlights();
@@ -244,15 +260,23 @@ async function initialize(): Promise<void> {
     "#idealo-multi-add-btn"
   ) as HTMLButtonElement;
 
-  const items: ProductItem[] = await chrome.runtime.sendMessage({
-    action: "getItems",
-    storageKey: siteConfig.storageKey,
-  } satisfies MessageRequest);
+  let items: ProductItem[];
+  try {
+    items = await chrome.runtime.sendMessage({
+      action: "getItems",
+      storageKey: siteConfig.storageKey,
+    } satisfies MessageRequest);
+  } catch (err) {
+    console.error("[multi-product-comparator] getItems failed:", err);
+    isInitializing = false;
+    return;
+  }
 
   renderItemList(items);
 
   if (!productId) {
     addBtn.style.display = "none";
+    isInitializing = false;
     return;
   }
 
@@ -261,6 +285,8 @@ async function initialize(): Promise<void> {
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
   highlightMatchingShops(matching);
+
+  isInitializing = false;
 
   addBtn.addEventListener("click", async () => {
     const shopNames = scrapeShopNames();
@@ -272,11 +298,17 @@ async function initialize(): Promise<void> {
       shopNames,
       addedAt: Date.now(),
     };
-    const updatedItems: ProductItem[] = await chrome.runtime.sendMessage({
-      action: "addItem",
-      storageKey: siteConfig.storageKey,
-      item: newItem,
-    } satisfies MessageRequest);
+    let updatedItems: ProductItem[];
+    try {
+      updatedItems = await chrome.runtime.sendMessage({
+        action: "addItem",
+        storageKey: siteConfig.storageKey,
+        item: newItem,
+      } satisfies MessageRequest);
+    } catch (err) {
+      console.error("[multi-product-comparator] addItem failed:", err);
+      return;
+    }
     updateAddButtonState(updatedItems);
     renderItemList(updatedItems);
     const shops = scrapeShopNames();
@@ -314,10 +346,16 @@ function waitForOffersAndInitialize(): void {
 async function refreshHighlights(): Promise<void> {
   const productId = siteConfig.extractProductId();
   if (!productId) return;
-  const items: ProductItem[] = await chrome.runtime.sendMessage({
-    action: "getItems",
-    storageKey: siteConfig.storageKey,
-  } satisfies MessageRequest);
+  let items: ProductItem[];
+  try {
+    items = await chrome.runtime.sendMessage({
+      action: "getItems",
+      storageKey: siteConfig.storageKey,
+    } satisfies MessageRequest);
+  } catch (err) {
+    console.error("[multi-product-comparator] refreshHighlights getItems failed:", err);
+    return;
+  }
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
   highlightMatchingShops(matching);
@@ -328,7 +366,9 @@ let knownOfferCount = 0;
 const domObserver = new MutationObserver(() => {
   const newProductId = siteConfig.extractProductId();
   if (newProductId !== currentProductId) {
-    initialize();
+    // Use waitForOffersAndInitialize which calls initialize() once offers are present.
+    // Do NOT call initialize() directly here to avoid a race condition where both
+    // run concurrently (initialize would start before offers are in the DOM).
     waitForOffersAndInitialize();
     return;
   }
@@ -345,7 +385,7 @@ domObserver.observe(document.body, {
   subtree: true,
 });
 
-chrome.storage.onChanged.addListener(async (changes, areaName) => {
+const storageChangeListener = async (changes: Record<string, chrome.storage.StorageChange>, areaName: string): Promise<void> => {
   if (areaName !== "session") return;
   if (!changes[siteConfig.storageKey]) return;
 
@@ -360,9 +400,19 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
   const currentShops = scrapeShopNames();
   const matching = computeMatchingShops(items, currentShops, productId);
   highlightMatchingShops(matching);
+};
+
+chrome.storage.onChanged.addListener(storageChangeListener);
+
+// Cleanup observers and listeners when the page is unloaded to prevent memory leaks
+window.addEventListener("unload", () => {
+  domObserver.disconnect();
+  chrome.storage.onChanged.removeListener(storageChangeListener);
 });
 
-initialize();
+// Use waitForOffersAndInitialize as the sole entry point: it calls initialize()
+// as soon as offers are detected, or immediately if they're already present.
+// Calling initialize() separately would race against waitForOffersAndInitialize.
 waitForOffersAndInitialize();
 
 }
