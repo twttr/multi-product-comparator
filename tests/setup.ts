@@ -37,6 +37,10 @@ const storageMock = {
     addListener: vi.fn((fn: (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) => {
       changeListeners.push(fn);
     }),
+    removeListener: vi.fn((fn: (changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) => {
+      const index = changeListeners.indexOf(fn);
+      if (index >= 0) changeListeners.splice(index, 1);
+    }),
   },
 };
 
