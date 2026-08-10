@@ -169,7 +169,7 @@ function renderItemList(items: ProductItem[]): void {
   listEl.innerHTML = "";
   clearBtn.style.display = items.length > 0 ? "block" : "none";
 
-  items
+  [...items]
     .sort((a, b) => b.addedAt - a.addedAt)
     .forEach((item) => {
       const row = document.createElement("div");
@@ -311,8 +311,7 @@ async function initialize(): Promise<void> {
     }
     updateAddButtonState(updatedItems);
     renderItemList(updatedItems);
-    const shops = scrapeShopNames();
-    const matching = computeMatchingShops(updatedItems, shops, productId);
+    const matching = computeMatchingShops(updatedItems, shopNames, productId);
     highlightMatchingShops(matching);
   });
 }
@@ -417,7 +416,7 @@ const storageChangeListener = async (changes: Record<string, chrome.storage.Stor
 chrome.storage.onChanged.addListener(storageChangeListener);
 
 // Cleanup observers and listeners when the page is unloaded to prevent memory leaks
-window.addEventListener("unload", () => {
+window.addEventListener("pagehide", () => {
   domObserver.disconnect();
   if (domChangeTimer !== null) clearTimeout(domChangeTimer);
   chrome.storage.onChanged.removeListener(storageChangeListener);

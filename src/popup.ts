@@ -1,5 +1,6 @@
 import type { ProductItem, MessageRequest } from "./types.js";
 import { storageKeyFromHostname } from "./sites.js";
+import { sanitizeProductUrl } from "./sanitize.js";
 
 const itemListEl = document.getElementById("item-list")!;
 const clearAllBtn = document.getElementById("clear-all")!;
@@ -26,7 +27,7 @@ function renderItems(items: ProductItem[], storageKey: string): void {
   emptyStateEl.style.display = hasItems ? "none" : "block";
   clearAllBtn.style.display = hasItems ? "block" : "none";
 
-  items
+  [...items]
     .sort((a, b) => b.addedAt - a.addedAt)
     .forEach((item) => {
       const row = document.createElement("div");
@@ -34,14 +35,8 @@ function renderItems(items: ProductItem[], storageKey: string): void {
 
       const link = document.createElement("a");
       // Sanitize URL: only allow http/https protocols to prevent XSS via javascript: URIs
-      try {
-        const parsedUrl = new URL(item.productUrl);
-        if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
-          link.href = item.productUrl;
-        }
-      } catch {
-        // Invalid URL — leave href unset (link renders as plain text anchor)
-      }
+      const safeUrl = sanitizeProductUrl(item.productUrl);
+      if (safeUrl) link.href = safeUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = item.productName;
@@ -49,7 +44,9 @@ function renderItems(items: ProductItem[], storageKey: string): void {
 
       const shopCount = document.createElement("span");
       shopCount.className = "shop-count";
-      shopCount.textContent = `${item.shopNames.length} shops`;
+      shopCount.textContent =
+        chrome.i18n.getMessage("popupShopCount", [String(item.shopNames.length)]) ||
+        `${item.shopNames.length} shops`;
 
       const removeBtn = document.createElement("button");
       removeBtn.className = "remove-btn";

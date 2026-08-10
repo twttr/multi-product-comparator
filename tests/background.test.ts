@@ -99,4 +99,20 @@ describe("background message handler", () => {
     const result = await handleMessage({ action: "unknownAction" });
     expect(result).toBeNull();
   });
+
+  it("accepts every storage key defined in sites.ts", async () => {
+    const { ALL_STORAGE_KEYS } = await import("../src/sites.js");
+    for (const storageKey of ALL_STORAGE_KEYS) {
+      const result = await handleMessage({ action: "getItems", storageKey });
+      expect(result, storageKey).toEqual([]);
+    }
+  });
+
+  it("rejects storage keys not defined in sites.ts", async () => {
+    const result = await handleMessage({
+      action: "getItems",
+      storageKey: "items_evil",
+    });
+    expect(result).toBeNull();
+  });
 });

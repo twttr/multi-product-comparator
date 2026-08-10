@@ -13,6 +13,10 @@ const SITE_MAPPINGS: SiteMapping[] = [
   { key: "guenstiger", hostPattern: /guenstiger\./, storageKey: "items_guenstiger" },
 ];
 
+export const ALL_STORAGE_KEYS: string[] = SITE_MAPPINGS.map(
+  (mapping) => mapping.storageKey
+);
+
 export function detectSiteKey(hostname: string): SiteKey | null {
   for (const mapping of SITE_MAPPINGS) {
     if (mapping.hostPattern.test(hostname)) return mapping.key;

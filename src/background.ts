@@ -1,5 +1,6 @@
 import type { MessageRequest } from "./types.js";
 import { addItem, getItems, removeItem, clearAll } from "./storage.js";
+import { ALL_STORAGE_KEYS } from "./sites.js";
 
 if (typeof chrome.storage.session.setAccessLevel === "function") {
   chrome.storage.session.setAccessLevel({
@@ -7,13 +8,7 @@ if (typeof chrome.storage.session.setAccessLevel === "function") {
   });
 }
 
-// Allowed storage keys — must match exactly the keys defined in sites.ts
-const ALLOWED_STORAGE_KEYS = new Set([
-  "items_idealo",
-  "items_geizhals",
-  "items_billiger",
-  "items_guenstiger",
-]);
+const ALLOWED_STORAGE_KEYS = new Set(ALL_STORAGE_KEYS);
 
 function isValidStorageKey(key: unknown): key is string {
   return typeof key === "string" && ALLOWED_STORAGE_KEYS.has(key);

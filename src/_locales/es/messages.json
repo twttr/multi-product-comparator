@@ -16,5 +16,8 @@
   },
   "popupRemove": {
     "message": "Eliminar"
+  },
+  "popupShopCount": {
+    "message": "$1 tiendas"
   }
 }
