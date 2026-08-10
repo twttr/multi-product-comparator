@@ -92,6 +92,7 @@ describe("initialize", () => {
     expect(
       highlighted[0].querySelector("[data-shop-name]")?.getAttribute("data-shop-name")
     ).toBe("shopA");
+    expect(highlighted[0].querySelectorAll(".idealo-multi-overlay")).toHaveLength(1);
   });
 
   it("marks add button as added when current product already stored", async () => {

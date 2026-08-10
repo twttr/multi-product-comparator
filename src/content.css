@@ -93,11 +93,10 @@
   position: relative !important;
 }
 
-.idealo-multi-highlight::after {
-  content: "" !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background: rgba(52, 168, 83, 0.08) !important;
-  pointer-events: none !important;
-  z-index: 2147483646 !important;
+.idealo-multi-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(52, 168, 83, 0.08);
+  pointer-events: none;
+  z-index: 2147483646;
 }

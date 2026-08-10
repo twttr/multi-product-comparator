@@ -145,6 +145,9 @@ export function createContentController(
     document.querySelectorAll(".idealo-multi-highlight").forEach((el) => {
       el.classList.remove("idealo-multi-highlight");
     });
+    document.querySelectorAll(".idealo-multi-overlay").forEach((el) => {
+      el.remove();
+    });
   }
 
   function highlightMatchingShops(matchingShopNames: Set<string>): void {
@@ -156,8 +159,11 @@ export function createContentController(
       const shopName = siteConfig.extractShopName(el);
       if (shopName && matchingShopNames.has(shopName)) {
         const row = el.closest(siteConfig.offerRowSelector);
-        if (row) {
+        if (row && !row.classList.contains("idealo-multi-highlight")) {
           row.classList.add("idealo-multi-highlight");
+          const overlay = document.createElement("div");
+          overlay.className = "idealo-multi-overlay";
+          row.appendChild(overlay);
         }
       }
     });
