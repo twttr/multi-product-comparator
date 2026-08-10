@@ -12,6 +12,7 @@ export interface SiteConfig {
   extractShopName: (el: Element) => string | null;
   offerRowSelector: string;
   extractProductId: () => string | null;
+  isProductPage?: () => boolean;
 }
 
 export type MessageRequest =

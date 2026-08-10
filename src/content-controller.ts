@@ -343,6 +343,13 @@ export function createContentController(
       subtree: true,
     });
     chrome.storage.onChanged.addListener(storageChangeListener);
+    // On product pages without standard offer markup (e.g. idealo's ?local
+    // view) waitForOffersAndInitialize never fires — show the panel anyway.
+    // The add button stays hidden because extractProductId returns null, and
+    // the isInitializing guard resolves the race if offers arrive mid-call.
+    if (siteConfig.isProductPage?.()) {
+      initialize();
+    }
     waitForOffersAndInitialize();
   }
 

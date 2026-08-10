@@ -107,6 +107,28 @@ describe("initialize", () => {
   });
 });
 
+describe("product page without standard offers", () => {
+  it("shows panel with hidden add button on offer-less product pages", async () => {
+    window.history.pushState({}, "", "/preisvergleich/OffersOfProduct/12345_-foo.html?local");
+    controller.start();
+    await flushAsync();
+    window.history.pushState({}, "", "/");
+
+    expect(document.getElementById("idealo-multi-panel")).not.toBeNull();
+    const addBtn = document.getElementById(
+      "idealo-multi-add-btn"
+    ) as HTMLButtonElement;
+    expect(addBtn.style.display).toBe("none");
+  });
+
+  it("does not show panel on non-product pages without offers", async () => {
+    controller.start();
+    await flushAsync();
+
+    expect(document.getElementById("idealo-multi-panel")).toBeNull();
+  });
+});
+
 describe("mutation throttling", () => {
   it("coalesces a mutation burst into a single handleDomChange", async () => {
     createOfferRow("shopA");

@@ -14,4 +14,10 @@ if (siteKey) {
   window.addEventListener("pagehide", () => {
     controller.stop();
   });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) {
+      controller.start();
+    }
+  });
 }

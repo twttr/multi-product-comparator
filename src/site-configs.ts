@@ -14,6 +14,7 @@ const idealoConfig: SiteConfig = {
     const url = new URL(firstOffer.href, window.location.origin);
     return url.searchParams.get("productid");
   },
+  isProductPage: () => /\/OffersOfProduct\//i.test(window.location.pathname),
 };
 
 const geizhalsConfig: SiteConfig = {
