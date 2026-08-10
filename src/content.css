@@ -92,3 +92,8 @@
 .idealo-multi-highlight {
   box-shadow: inset 0 0 0 1000px rgba(52, 168, 83, 0.08) !important;
 }
+
+.idealo-multi-highlight > div,
+.idealo-multi-highlight > div > a > span {
+  background: transparent !important;
+}
