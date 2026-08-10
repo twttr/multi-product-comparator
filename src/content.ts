@@ -362,8 +362,10 @@ async function refreshHighlights(): Promise<void> {
 }
 
 let knownOfferCount = 0;
+let domChangeTimer: ReturnType<typeof setTimeout> | null = null;
+const DOM_CHANGE_THROTTLE_MS = 250;
 
-const domObserver = new MutationObserver(() => {
+function handleDomChange(): void {
   const newProductId = siteConfig.extractProductId();
   if (newProductId !== currentProductId) {
     // Use waitForOffersAndInitialize which calls initialize() once offers are present.
@@ -378,6 +380,16 @@ const domObserver = new MutationObserver(() => {
     knownOfferCount = currentCount;
     refreshHighlights();
   }
+}
+
+// Coalesce mutation bursts: schedule one handleDomChange per throttle window
+// instead of running DOM queries + sendMessage on every mutation record.
+const domObserver = new MutationObserver(() => {
+  if (domChangeTimer !== null) return;
+  domChangeTimer = setTimeout(() => {
+    domChangeTimer = null;
+    handleDomChange();
+  }, DOM_CHANGE_THROTTLE_MS);
 });
 
 domObserver.observe(document.body, {
@@ -407,6 +419,7 @@ chrome.storage.onChanged.addListener(storageChangeListener);
 // Cleanup observers and listeners when the page is unloaded to prevent memory leaks
 window.addEventListener("unload", () => {
   domObserver.disconnect();
+  if (domChangeTimer !== null) clearTimeout(domChangeTimer);
   chrome.storage.onChanged.removeListener(storageChangeListener);
 });
 
