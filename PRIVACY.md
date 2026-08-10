@@ -21,7 +21,7 @@ This data exists only in your browser and is automatically cleared when you clos
 
 ## External requests
 
-The extension makes no network requests. All data stays local to your browser.
+The extension makes no requests to third-party servers. On idealo's local-offers view, clicking "Add to Compare" fetches the standard offer list of the same product from the site you are already on (same origin, using your existing session) to read shop names. Nothing is sent anywhere else; all stored data stays local to your browser.
 
 ## Contact
 
