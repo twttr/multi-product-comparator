@@ -90,13 +90,14 @@
 }
 
 .idealo-multi-highlight {
-  box-shadow: inset 0 0 0 1000px rgba(52, 168, 83, 0.08) !important;
+  position: relative !important;
 }
 
-.idealo-multi-highlight > div,
-.idealo-multi-highlight a:link,
-.idealo-multi-highlight a:visited,
-.idealo-multi-highlight a span {
-  background-color: transparent !important;
-  background-image: none !important;
+.idealo-multi-highlight::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(52, 168, 83, 0.08) !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
 }
