@@ -94,6 +94,6 @@
 }
 
 .idealo-multi-highlight > div,
-.idealo-multi-highlight > div > a > span {
+.idealo-multi-highlight a span {
   background: transparent !important;
 }
