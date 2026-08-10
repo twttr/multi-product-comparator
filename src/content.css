@@ -94,6 +94,9 @@
 }
 
 .idealo-multi-highlight > div,
+.idealo-multi-highlight a:link,
+.idealo-multi-highlight a:visited,
 .idealo-multi-highlight a span {
-  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
 }
