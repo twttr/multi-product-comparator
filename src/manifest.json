@@ -11,8 +11,18 @@
     "128": "icons/icon128.png"
   },
   "permissions": ["storage", "activeTab"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "multi-product-comparator@twttr.github.io",
+      "strict_min_version": "115.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {

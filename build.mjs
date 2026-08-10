@@ -10,7 +10,7 @@ const buildOptions = {
   bundle: true,
   outdir: "dist",
   format: "iife",
-  target: "chrome120",
+  target: ["chrome120", "firefox115"],
   sourcemap: isWatch ? "inline" : false,
 };
 

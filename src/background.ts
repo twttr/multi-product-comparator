@@ -1,9 +1,11 @@
 import type { MessageRequest } from "./types.js";
 import { addItem, getItems, removeItem, clearAll } from "./storage.js";
 
-chrome.storage.session.setAccessLevel({
-  accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
-});
+if (typeof chrome.storage.session.setAccessLevel === "function") {
+  chrome.storage.session.setAccessLevel({
+    accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
+  });
+}
 
 // Allowed storage keys — must match exactly the keys defined in sites.ts
 const ALLOWED_STORAGE_KEYS = new Set([
