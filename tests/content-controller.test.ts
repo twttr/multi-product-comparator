@@ -108,17 +108,58 @@ describe("initialize", () => {
 });
 
 describe("product page without standard offers", () => {
-  it("shows panel with hidden add button on offer-less product pages", async () => {
+  it("shows panel with usable add button via URL product id fallback", async () => {
     window.history.pushState({}, "", "/preisvergleich/OffersOfProduct/12345_-foo.html?local");
-    controller.start();
-    await flushAsync();
-    window.history.pushState({}, "", "/");
+    try {
+      controller.start();
+      await flushAsync();
 
-    expect(document.getElementById("idealo-multi-panel")).not.toBeNull();
-    const addBtn = document.getElementById(
-      "idealo-multi-add-btn"
-    ) as HTMLButtonElement;
-    expect(addBtn.style.display).toBe("none");
+      expect(document.getElementById("idealo-multi-panel")).not.toBeNull();
+      const addBtn = document.getElementById(
+        "idealo-multi-add-btn"
+      ) as HTMLButtonElement;
+      expect(addBtn.style.display).not.toBe("none");
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
+  it("fetches shop names from the standard view when none are scrapeable", async () => {
+    window.history.pushState({}, "", "/preisvergleich/OffersOfProduct/12345_-foo.html?local");
+    try {
+      const config = {
+        ...SITE_CONFIG_MAP.idealo,
+        fetchOfferShopNames: vi.fn(async () => ["shopX", "shopY"]),
+      };
+      controller.stop();
+      controller = createContentController(config, TEST_STRINGS);
+      controller.start();
+      await flushAsync();
+
+      runtimeMock.sendMessage.mockImplementation(async (msg: { action: string }) => {
+        if (msg.action === "addItem") return [makeItem("12345", ["shopX", "shopY"])];
+        return [];
+      });
+
+      const addBtn = document.getElementById(
+        "idealo-multi-add-btn"
+      ) as HTMLButtonElement;
+      addBtn.click();
+      await flushAsync();
+
+      expect(config.fetchOfferShopNames).toHaveBeenCalled();
+      expect(runtimeMock.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "addItem",
+          item: expect.objectContaining({
+            productId: "12345",
+            shopNames: ["shopX", "shopY"],
+          }),
+        })
+      );
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
   });
 
   it("does not show panel on non-product pages without offers", async () => {

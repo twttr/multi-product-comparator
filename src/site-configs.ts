@@ -10,11 +10,30 @@ const idealoConfig: SiteConfig = {
     const firstOffer = document.querySelector<HTMLAnchorElement>(
       idealoConfig.offerLinkSelector
     );
-    if (!firstOffer) return null;
-    const url = new URL(firstOffer.href, window.location.origin);
-    return url.searchParams.get("productid");
+    if (firstOffer) {
+      const url = new URL(firstOffer.href, window.location.origin);
+      const productId = url.searchParams.get("productid");
+      if (productId) return productId;
+    }
+    const pathMatch = window.location.pathname.match(/\/OffersOfProduct\/(\d+)/i);
+    return pathMatch ? pathMatch[1] : null;
   },
   isProductPage: () => /\/OffersOfProduct\//i.test(window.location.pathname),
+  fetchOfferShopNames: async () => {
+    const response = await fetch(window.location.pathname, {
+      credentials: "same-origin",
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const offers = doc.querySelectorAll(idealoConfig.offerLinkSelector);
+    const shopNames = new Set<string>();
+    offers.forEach((el) => {
+      const shopName = idealoConfig.extractShopName(el);
+      if (shopName) shopNames.add(shopName);
+    });
+    return Array.from(shopNames);
+  },
 };
 
 const geizhalsConfig: SiteConfig = {

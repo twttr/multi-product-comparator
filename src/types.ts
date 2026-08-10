@@ -13,6 +13,7 @@ export interface SiteConfig {
   offerRowSelector: string;
   extractProductId: () => string | null;
   isProductPage?: () => boolean;
+  fetchOfferShopNames?: () => Promise<string[]>;
 }
 
 export type MessageRequest =

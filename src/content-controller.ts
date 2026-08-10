@@ -212,7 +212,17 @@ export function createContentController(
     isInitializing = false;
 
     addBtn.addEventListener("click", async () => {
-      const shopNames = scrapeShopNames();
+      let shopNames = scrapeShopNames();
+      if (shopNames.length === 0 && siteConfig.fetchOfferShopNames) {
+        addBtn.disabled = true;
+        try {
+          shopNames = await siteConfig.fetchOfferShopNames();
+        } catch (err) {
+          console.error("[multi-product-comparator] shop name fetch failed:", err);
+        } finally {
+          addBtn.disabled = false;
+        }
+      }
       const productName = scrapeProductName();
       const newItem: ProductItem = {
         productId,
