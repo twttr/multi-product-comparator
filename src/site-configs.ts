@@ -3,7 +3,8 @@ import type { SiteKey } from "./sites.js";
 
 const idealoConfig: SiteConfig = {
   storageKey: "items_idealo",
-  offerLinkSelector: ".productOffers-listItemOfferLink[data-shop-name]",
+  offerLinkSelector:
+    ".productOffers-listItemOfferLink[data-shop-name], .productOffers-listItemOfferCtaLeadout[data-shop-name]",
   extractShopName: (el) => el.getAttribute("data-shop-name"),
   offerRowSelector: ".productOffers-listItem",
   extractProductId: () => {

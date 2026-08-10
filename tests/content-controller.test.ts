@@ -170,6 +170,30 @@ describe("product page without standard offers", () => {
   });
 });
 
+describe("local offer rows (CTA leadout markup)", () => {
+  it("scrapes and highlights rows carrying data-shop-name on the CTA link", async () => {
+    const row = document.createElement("li");
+    row.className = "productOffers-listItem";
+    const cta = document.createElement("a");
+    cta.className = "productOffers-listItemOfferCtaLeadout button";
+    cta.setAttribute("data-shop-name", "saturn.de");
+    cta.href = "https://www.idealo.de/relocator/relocate?offerKey=abc";
+    row.appendChild(cta);
+    document.body.appendChild(row);
+
+    window.history.pushState({}, "", "/preisvergleich/OffersOfProduct/777_-x.html?local");
+    try {
+      runtimeMock.sendMessage.mockResolvedValue([makeItem("999", ["saturn.de"])]);
+      controller.start();
+      await flushAsync();
+
+      expect(row.classList.contains("idealo-multi-highlight")).toBe(true);
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+});
+
 describe("mutation throttling", () => {
   it("coalesces a mutation burst into a single handleDomChange", async () => {
     createOfferRow("shopA");
